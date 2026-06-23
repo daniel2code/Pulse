@@ -280,6 +280,15 @@ export default function Home() {
         const data = await poll(sessionId);
         if (!active) return;
         setPeers(data.peers);
+
+        const c = connRef.current;
+        if (c.kind !== "idle") {
+          const peerStillOnline = data.peers.some((p) => p.id === c.peerId);
+          if (!peerStillOnline) {
+            teardown("Stranger went offline.");
+          }
+        }
+
         for (const s of data.signals) processSignalRef.current(s);
       } catch {}
       if (active) timer = setTimeout(tick, POLL_INTERVAL_MS);
