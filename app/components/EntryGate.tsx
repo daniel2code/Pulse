@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Compass, MapPin, AlertCircle, Globe } from "lucide-react";
 
 export default function EntryGate({
   onReady,
@@ -27,37 +29,84 @@ export default function EntryGate({
             : "Couldn't get your location. Please try again.",
         );
       },
-      // High accuracy + maximumAge:0 forces a fresh fix (Wi-Fi/GPS scan)
-      // instead of reusing the browser's cached IP-based location.
       { enableHighAccuracy: true, timeout: 15_000, maximumAge: 0 },
     );
   }
 
   return (
-    <div className="flex min-h-full flex-1 flex-col items-center justify-center gap-8 bg-zinc-950 p-6 text-zinc-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold tracking-tight">Pulse</h1>
-        <p className="mt-2 max-w-sm text-zinc-400">
-          A living globe of anonymous strangers. Drop onto the map and connect.
-        </p>
-      </div>
+    <div className="relative flex min-h-screen flex-col items-center justify-center bg-[#030303] p-6 text-zinc-100 overflow-hidden">
+      {/* Decorative ambient background glows */}
+      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-96 h-96 bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
 
-      <button
-        onClick={enter}
-        disabled={status === "locating"}
-        className="rounded-full bg-emerald-400 px-8 py-3 font-semibold text-zinc-950 transition hover:bg-emerald-300 disabled:opacity-60"
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="relative z-10 w-full max-w-md glass-panel rounded-3xl p-8 text-center"
       >
-        {status === "locating" ? "Locating…" : "Enter Pulse"}
-      </button>
+        {/* Globe Header Icon */}
+        <motion.div 
+          animate={{ rotate: 360 }}
+          transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
+          className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 mb-6"
+        >
+          <Globe className="h-8 w-8" />
+        </motion.div>
 
-      {status === "error" && (
-        <p className="max-w-sm text-center text-sm text-red-400">{error}</p>
-      )}
+        <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 bg-clip-text text-transparent">
+          Pulse
+        </h1>
+        <p className="mt-3 text-zinc-400 text-sm leading-relaxed">
+          A living globe of anonymous strangers. Drop onto the map, locate yourself, and connect instantly.
+        </p>
 
-      <p className="max-w-sm text-center text-xs text-zinc-500">
-        No sign-up. Your dot is placed 1–3&nbsp;km from your real location.
-        Nothing is stored — closing the tab ends everything.
-      </p>
+        <div className="mt-8 flex flex-col items-center justify-center">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={enter}
+            disabled={status === "locating"}
+            className="w-full flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 py-3.5 px-6 font-semibold text-zinc-950 shadow-lg shadow-emerald-500/25 transition-all hover:from-emerald-400 hover:to-teal-400 disabled:opacity-60 cursor-pointer"
+          >
+            {status === "locating" ? (
+              <>
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                >
+                  <Compass className="h-5 w-5" />
+                </motion.div>
+                <span>Locating…</span>
+              </>
+            ) : (
+              <>
+                <MapPin className="h-5 w-5" />
+                <span>Enter Pulse</span>
+              </>
+            )}
+          </motion.button>
+
+          <AnimatePresence>
+            {status === "error" && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-4 flex items-start gap-2 rounded-xl bg-red-500/10 border border-red-500/25 p-3 text-left text-sm text-red-400"
+              >
+                <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <div className="mt-8 border-t border-zinc-800/60 pt-6 text-xs text-zinc-500 space-y-2">
+          <p>🔒 No accounts. No logs. Your chats and calls are strictly peer-to-peer.</p>
+          <p>📍 Location is randomized by 1–3 km for complete privacy.</p>
+        </div>
+      </motion.div>
     </div>
   );
 }

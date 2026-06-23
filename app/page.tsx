@@ -33,6 +33,12 @@ export default function Home() {
   const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(
     null,
   );
+  const [remoteTyping, setRemoteTyping] = useState(false);
+
+  const getPeerCoords = (peerId?: string) => {
+    if (!peerId) return null;
+    return peers.find((p) => p.id === peerId) || null;
+  };
 
   const [conn, _setConn] = useState<Conn>({ kind: "idle" });
   const connRef = useRef<Conn>(conn);
@@ -70,6 +76,7 @@ export default function Home() {
     setVideo("none");
     setMessages([]);
     setConn({ kind: "idle" });
+    setRemoteTyping(false);
     if (message) showNotice(message);
   }
 
@@ -124,6 +131,12 @@ export default function Home() {
         setLocalStream(null);
         setRemoteStream(null);
         setVideo("none");
+        break;
+      case "typing-start":
+        setRemoteTyping(true);
+        break;
+      case "typing-stop":
+        setRemoteTyping(false);
         break;
     }
   }
@@ -358,6 +371,8 @@ export default function Home() {
           declineLabel="Decline"
           onAccept={acceptIncoming}
           onDecline={declineIncoming}
+          myCoords={myLocation}
+          peerCoords={getPeerCoords(conn.peerId)}
         />
       )}
 
@@ -372,6 +387,9 @@ export default function Home() {
           }}
           onStartVideo={startVideoRequest}
           onEnd={endConnection}
+          remoteTyping={remoteTyping}
+          onTypingStart={() => peerRef.current?.sendControl("typing-start")}
+          onTypingStop={() => peerRef.current?.sendControl("typing-stop")}
         />
       )}
 
@@ -389,6 +407,8 @@ export default function Home() {
           declineLabel="Decline"
           onAccept={acceptVideo}
           onDecline={declineVideo}
+          myCoords={myLocation}
+          peerCoords={getPeerCoords(conn.kind === "connected" || conn.kind === "connecting" ? conn.peerId : undefined)}
         />
       )}
 

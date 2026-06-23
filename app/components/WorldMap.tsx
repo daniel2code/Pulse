@@ -12,7 +12,7 @@ function dotColor(id: string): string {
   for (let i = 0; i < id.length; i++) {
     hash = (hash * 31 + id.charCodeAt(i)) | 0;
   }
-  return `hsl(${Math.abs(hash) % 360}, 70%, 60%)`;
+  return `hsl(${Math.abs(hash) % 360}, 75%, 55%)`;
 }
 
 export default function WorldMap({
@@ -32,8 +32,6 @@ export default function WorldMap({
   const meMarkerRef = useRef<Marker | null>(null);
   const [ready, setReady] = useState(false);
 
-  // Marker click handlers are bound once, so read the live click handler +
-  // connectability through refs (synced in an effect, never during render).
   const onPeerClickRef = useRef(onPeerClick);
   const canConnectRef = useRef(canConnect);
   useEffect(() => {
@@ -41,7 +39,7 @@ export default function WorldMap({
     canConnectRef.current = canConnect;
   });
 
-  // Initialise the map once.
+  // Initialize map
   useEffect(() => {
     if (!TOKEN || !containerRef.current) return;
     let cancelled = false;
@@ -54,11 +52,11 @@ export default function WorldMap({
       const map = new mapboxgl.Map({
         container: containerRef.current,
         style: "mapbox://styles/mapbox/dark-v11",
-        // Open centered on the user if we know where they are, else world view.
         center: me ? [me.lng, me.lat] : [0, 20],
-        zoom: me ? 4 : 1.4,
-        attributionControl: true,
+        zoom: me ? 3.5 : 1.5,
+        attributionControl: false,
       });
+
       map.on("load", () => {
         if (!cancelled) setReady(true);
       });
@@ -75,11 +73,10 @@ export default function WorldMap({
       mapRef.current = null;
       setReady(false);
     };
-    // `me` is only read for the initial center; we don't want to re-init on change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Show / move the user's own "you are here" pin.
+  // Set own marker & center map
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready || !me) return;
@@ -92,11 +89,18 @@ export default function WorldMap({
         const el = document.createElement("div");
         el.className = "pulse-me";
         el.title = "You are here";
-        el.innerHTML = `<span class="pulse-me-label">Me</span>📍`;
-        // anchor "bottom" → the pin's tip sits on the exact coordinate.
-        meMarkerRef.current = new mapboxgl.Marker({ element: el, anchor: "bottom" })
+        el.innerHTML = `<span class="pulse-me-label">You (Here)</span>`;
+        meMarkerRef.current = new mapboxgl.Marker({ element: el, anchor: "center" })
           .setLngLat([me.lng, me.lat])
           .addTo(map);
+
+        // Smooth transition to user's location
+        map.flyTo({
+          center: [me.lng, me.lat],
+          zoom: 4.5,
+          speed: 1.2,
+          essential: true,
+        });
       } else {
         meMarkerRef.current.setLngLat([me.lng, me.lat]);
       }
@@ -107,7 +111,7 @@ export default function WorldMap({
     };
   }, [me, ready]);
 
-  // Reconcile markers whenever the peer list changes (or the map becomes ready).
+  // Synchronize peer markers
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
@@ -125,21 +129,33 @@ export default function WorldMap({
         if (!marker) {
           const el = document.createElement("button");
           el.className = "pulse-dot";
+          el.style.color = dotColor(peer.id);
           el.style.background = dotColor(peer.id);
           el.title = "Tap to connect";
           el.addEventListener("click", (e) => {
             e.stopPropagation();
-            if (canConnectRef.current) onPeerClickRef.current(peer.id);
+            if (canConnectRef.current) {
+              onPeerClickRef.current(peer.id);
+              // Focus map on connection target
+              map.easeTo({
+                center: [peer.lng, peer.lat],
+                zoom: Math.max(map.getZoom(), 5.5),
+                duration: 800,
+              });
+            }
           });
           marker = new mapboxgl.Marker({ element: el })
             .setLngLat([peer.lng, peer.lat])
             .addTo(map);
           markers.set(peer.id, marker);
         }
-        marker.getElement().style.opacity = peer.busy ? "0.35" : "1";
+        
+        const el = marker.getElement();
+        el.style.opacity = peer.busy ? "0.3" : "1";
+        el.style.cursor = peer.busy || !canConnectRef.current ? "not-allowed" : "pointer";
       }
 
-      // Drop markers for peers that went offline / got filtered out.
+      // Remove stale markers
       for (const [id, marker] of markers) {
         if (!seen.has(id)) {
           marker.remove();
@@ -155,21 +171,20 @@ export default function WorldMap({
 
   return (
     <div className="absolute inset-0">
-      <div ref={containerRef} className="h-full w-full bg-zinc-900" />
+      <div ref={containerRef} className="h-full w-full bg-[#030303]" />
 
       {!TOKEN && (
-        <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
-          <p className="max-w-md rounded-lg bg-zinc-800 p-4 text-sm text-zinc-200">
-            Set{" "}
-            <code className="text-emerald-400">NEXT_PUBLIC_MAPBOX_TOKEN</code> in{" "}
-            <code>.env</code> to load the map.
+        <div className="absolute inset-0 flex items-center justify-center p-6 text-center z-10 bg-[#030303]/90">
+          <p className="max-w-md rounded-2xl glass-panel p-6 text-sm text-zinc-300">
+            Set <code className="text-emerald-400">NEXT_PUBLIC_MAPBOX_TOKEN</code> in your <code>.env</code> file to load the world map.
           </p>
         </div>
       )}
 
-      {/* Online count */}
-      <div className="absolute bottom-4 left-4 rounded-full bg-zinc-900/80 px-3 py-1.5 text-xs text-zinc-300 backdrop-blur">
-        {peers.length} online
+      {/* Online count badge */}
+      <div className="absolute bottom-6 left-6 rounded-2xl glass-panel px-4 py-2 text-xs font-medium text-zinc-300 flex items-center gap-2 border border-white/5">
+        <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+        <span>{peers.length} active strangers</span>
       </div>
     </div>
   );
