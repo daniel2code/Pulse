@@ -88,34 +88,38 @@ export class PeerSession {
   }
 
   async handleSignal(type: DescType, payload: string) {
-    if (this.closed) return;
-    const data = JSON.parse(payload);
+    try {
+      if (this.closed) return;
+      const data = JSON.parse(payload);
 
-    if (type === "ice") {
-      if (!this.pc.remoteDescription) {
-        this.pendingCandidates.push(data);
+      if (type === "ice") {
+        if (!this.pc.remoteDescription) {
+          this.pendingCandidates.push(data);
+          return;
+        }
+        try {
+          await this.pc.addIceCandidate(data);
+        } catch {}
         return;
       }
-      try {
-        await this.pc.addIceCandidate(data);
-      } catch {}
-      return;
-    }
 
-    const desc = data as RTCSessionDescriptionInit;
-    const offerCollision =
-      desc.type === "offer" &&
-      (this.makingOffer || this.pc.signalingState !== "stable");
-    this.ignoreOffer = !this.polite && offerCollision;
-    if (this.ignoreOffer) return;
+      const desc = data as RTCSessionDescriptionInit;
+      const offerCollision =
+        desc.type === "offer" &&
+        (this.makingOffer || this.pc.signalingState !== "stable");
+      this.ignoreOffer = !this.polite && offerCollision;
+      if (this.ignoreOffer) return;
 
-    await this.pc.setRemoteDescription(desc);
-    await this.flushPendingCandidates();
-    if (desc.type === "offer") {
-      await this.pc.setLocalDescription();
-      if (this.pc.localDescription) {
-        this.cb.onSignal("answer", JSON.stringify(this.pc.localDescription));
+      await this.pc.setRemoteDescription(desc);
+      await this.flushPendingCandidates();
+      if (desc.type === "offer") {
+        await this.pc.setLocalDescription();
+        if (this.pc.localDescription) {
+          this.cb.onSignal("answer", JSON.stringify(this.pc.localDescription));
+        }
       }
+    } catch (err) {
+      console.error("Error inside handleSignal:", err);
     }
   }
 

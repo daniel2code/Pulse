@@ -71,6 +71,7 @@ export default function Home() {
   const peerRef = useRef<PeerSession | null>(null);
   const msgId = useRef(0);
   const requestTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingSignalsRef = useRef<Map<string, SignalMsg[]>>(new Map());
 
   function showNotice(text: string) {
     setNotice(text);
@@ -85,6 +86,7 @@ export default function Home() {
     if (requestTimer.current) clearTimeout(requestTimer.current);
     peerRef.current?.close();
     peerRef.current = null;
+    pendingSignalsRef.current.clear();
     setLocalStream(null);
     setRemoteStream(null);
     setVideo("none");
@@ -112,6 +114,15 @@ export default function Home() {
       },
     });
     peerRef.current = ps;
+
+    // Process any queued signaling messages received before connection initialization
+    const queue = pendingSignalsRef.current.get(peerId);
+    if (queue) {
+      pendingSignalsRef.current.delete(peerId);
+      for (const sig of queue) {
+        void ps.handleSignal(sig.type as DescType, sig.payload ?? "");
+      }
+    }
   }
 
   function handleControl(ctrl: PeerControl) {
@@ -273,6 +284,13 @@ export default function Home() {
             sig.type as DescType,
             sig.payload ?? "",
           );
+        } else {
+          let q = pendingSignalsRef.current.get(sig.fromId);
+          if (!q) {
+            q = [];
+            pendingSignalsRef.current.set(sig.fromId, q);
+          }
+          q.push(sig);
         }
         break;
       }
