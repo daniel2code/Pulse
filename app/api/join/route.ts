@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { id, lat, lng } = parsed.data;
+  const { id, lat, lng, mood } = parsed.data;
   const offset = applyPrivacyOffset(lat, lng);
 
   try {
@@ -46,12 +46,14 @@ export async function POST(request: NextRequest) {
         id,
         lat: offset.lat,
         lng: offset.lng,
+        mood: mood ?? null,
         busy: false,
         lastSeen: new Date(),
       },
       update: {
         lat: offset.lat,
         lng: offset.lng,
+        mood: mood ?? null,
         lastSeen: new Date(),
       },
     });

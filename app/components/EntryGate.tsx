@@ -7,10 +7,21 @@ import { Compass, MapPin, AlertCircle, Globe } from "lucide-react";
 export default function EntryGate({
   onReady,
 }: {
-  onReady: (lat: number, lng: number) => void;
+  onReady: (lat: number, lng: number, mood: string | null) => void;
 }) {
   const [status, setStatus] = useState<"idle" | "locating" | "error">("idle");
   const [error, setError] = useState<string>("");
+  const [selectedMood, setSelectedMood] = useState<string>("💬");
+
+  const moods = [
+    { emoji: "💬", label: "Chatting" },
+    { emoji: "🚀", label: "Coding" },
+    { emoji: "🎧", label: "Music" },
+    { emoji: "🍕", label: "Eating" },
+    { emoji: "🎮", label: "Gaming" },
+    { emoji: "😴", label: "Sleepy" },
+    { emoji: "✈️", label: "Travel" },
+  ];
 
   function enter() {
     if (!("geolocation" in navigator)) {
@@ -20,7 +31,7 @@ export default function EntryGate({
     }
     setStatus("locating");
     navigator.geolocation.getCurrentPosition(
-      (pos) => onReady(pos.coords.latitude, pos.coords.longitude),
+      (pos) => onReady(pos.coords.latitude, pos.coords.longitude, selectedMood),
       (err) => {
         setStatus("error");
         setError(
@@ -61,7 +72,30 @@ export default function EntryGate({
           A living globe of anonymous strangers. Drop onto the map, locate yourself, and connect instantly.
         </p>
 
-        <div className="mt-8 flex flex-col items-center justify-center">
+        <div className="mt-6 text-left">
+          <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500 block mb-3">
+            Set your current vibe:
+          </label>
+          <div className="flex flex-wrap gap-2 justify-center mb-6">
+            {moods.map((m) => (
+              <button
+                key={m.emoji}
+                type="button"
+                onClick={() => setSelectedMood(m.emoji)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm border transition-all cursor-pointer ${
+                  selectedMood === m.emoji
+                    ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-300 font-medium shadow-sm shadow-emerald-500/10"
+                    : "bg-zinc-900/40 border-zinc-800/80 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60"
+                }`}
+              >
+                <span>{m.emoji}</span>
+                <span className="text-xs opacity-90">{m.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-2 flex flex-col items-center justify-center">
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}

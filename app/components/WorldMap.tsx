@@ -18,11 +18,13 @@ function dotColor(id: string): string {
 export default function WorldMap({
   peers,
   me,
+  myMood,
   onPeerClick,
   canConnect,
 }: {
   peers: PeerDot[];
   me: { lat: number; lng: number } | null;
+  myMood: string | null;
   onPeerClick: (id: string) => void;
   canConnect: boolean;
 }) {
@@ -90,6 +92,9 @@ export default function WorldMap({
         el.className = "pulse-me";
         el.title = "You are here";
         el.innerHTML = `<span class="pulse-me-label">You (Here)</span>`;
+        if (myMood) {
+          el.innerHTML += `<span class="pulse-mood-emoji absolute -top-8 left-1/2 -translate-x-1/2 bg-zinc-950 border border-zinc-800 rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-md shadow-black/50">${myMood}</span>`;
+        }
         meMarkerRef.current = new mapboxgl.Marker({ element: el, anchor: "center" })
           .setLngLat([me.lng, me.lat])
           .addTo(map);
@@ -103,13 +108,24 @@ export default function WorldMap({
         });
       } else {
         meMarkerRef.current.setLngLat([me.lng, me.lat]);
+        const el = meMarkerRef.current.getElement();
+        const existingMoodBadge = el.querySelector(".pulse-mood-emoji");
+        if (myMood) {
+          if (!existingMoodBadge) {
+            el.innerHTML += `<span class="pulse-mood-emoji absolute -top-8 left-1/2 -translate-x-1/2 bg-zinc-950 border border-zinc-800 rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-md shadow-black/50">${myMood}</span>`;
+          } else if (existingMoodBadge.textContent !== myMood) {
+            existingMoodBadge.textContent = myMood;
+          }
+        } else if (existingMoodBadge) {
+          existingMoodBadge.remove();
+        }
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [me, ready]);
+  }, [me, ready, myMood]);
 
   // Synchronize peer markers
   useEffect(() => {
@@ -153,6 +169,18 @@ export default function WorldMap({
         const el = marker.getElement();
         el.style.opacity = peer.busy ? "0.3" : "1";
         el.style.cursor = peer.busy || !canConnectRef.current ? "not-allowed" : "pointer";
+
+        // Update mood emoji badge
+        const existingMoodBadge = el.querySelector(".pulse-mood-emoji");
+        if (peer.mood) {
+          if (!existingMoodBadge) {
+            el.innerHTML += `<span class="pulse-mood-emoji absolute -top-8 left-1/2 -translate-x-1/2 bg-zinc-950 border border-zinc-800 rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-md shadow-black/50 hover:scale-110 transition-transform pointer-events-none">${peer.mood}</span>`;
+          } else if (existingMoodBadge.textContent !== peer.mood) {
+            existingMoodBadge.textContent = peer.mood;
+          }
+        } else if (existingMoodBadge) {
+          existingMoodBadge.remove();
+        }
       }
 
       // Remove stale markers

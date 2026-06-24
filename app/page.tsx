@@ -6,6 +6,7 @@ import WorldMap from "./components/WorldMap";
 import ConnectionPrompt from "./components/ConnectionPrompt";
 import ChatPanel, { type ChatMessage } from "./components/ChatPanel";
 import VideoPanel from "./components/VideoPanel";
+import DashboardWidget from "./components/DashboardWidget";
 import { join, leave, poll, sendSignal } from "@/lib/api";
 import { PeerSession, type DescType, type PeerControl } from "@/lib/webrtc";
 import { POLL_INTERVAL_MS } from "@/lib/presence";
@@ -34,6 +35,7 @@ export default function Home() {
     null,
   );
   const [remoteTyping, setRemoteTyping] = useState(false);
+  const [myMood, setMyMood] = useState<string | null>(null);
 
   const getPeerCoords = (peerId?: string) => {
     if (!peerId) return null;
@@ -325,9 +327,10 @@ export default function Home() {
     };
   }, [sessionId, phase]);
 
-  async function handleReady(lat: number, lng: number) {
+  async function handleReady(lat: number, lng: number, mood: string | null) {
     setMyLocation({ lat, lng });
-    await join(sessionId, lat, lng);
+    setMyMood(mood);
+    await join(sessionId, lat, lng, mood);
     setPhase("live");
   }
 
@@ -338,13 +341,16 @@ export default function Home() {
   const inChat = conn.kind === "connecting" || conn.kind === "connected";
 
   return (
-    <main className="fixed inset-0 overflow-hidden">
+    <main className="fixed inset-0 overflow-hidden text-zinc-100">
       <WorldMap
         peers={peers}
         me={myLocation}
+        myMood={myMood}
         onPeerClick={requestConnection}
         canConnect={conn.kind === "idle"}
       />
+
+      <DashboardWidget peers={peers} selfMood={myMood} />
 
       {notice && (
         <div className="absolute left-1/2 top-20 z-30 -translate-x-1/2 rounded-full bg-zinc-800/90 px-4 py-2 text-sm text-zinc-100 shadow-lg backdrop-blur">

@@ -36,6 +36,26 @@ export default function ChatPanel({
   const endRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isLocalTyping, setIsLocalTyping] = useState(false);
+  const [icebreaker, setIcebreaker] = useState("");
+
+  const ICEBREAKERS = [
+    "If you could instantly speak any language fluently, which one would it be?",
+    "What is the most beautiful place you've ever visited?",
+    "What's a movie or book that changed the way you think?",
+    "What would your dream job be if money wasn't a factor?",
+    "What's the best piece of advice you've ever received?",
+    "If you could host a dinner party with any 3 people (alive or dead), who would they be?",
+    "What's a weird habit or quirk you have?"
+  ];
+
+  const shuffleIcebreaker = () => {
+    const idx = Math.floor(Math.random() * ICEBREAKERS.length);
+    setIcebreaker(ICEBREAKERS[idx]);
+  };
+
+  useEffect(() => {
+    shuffleIcebreaker();
+  }, []);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -134,14 +154,48 @@ export default function ChatPanel({
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-5 space-y-4">
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center max-w-xs mx-auto space-y-3">
-            <div className="h-12 w-12 rounded-full bg-zinc-900/60 border border-white/5 flex items-center justify-center text-zinc-400">
-              <MessageCircle className="h-6 w-6" />
+          <div className="flex flex-col items-center justify-center h-full text-center max-w-sm mx-auto space-y-5">
+            <div className="flex flex-col items-center space-y-2">
+              <div className="h-12 w-12 rounded-full bg-zinc-900/60 border border-white/5 flex items-center justify-center text-zinc-400">
+                <MessageCircle className="h-6 w-6" />
+              </div>
+              <p className="font-semibold text-sm text-zinc-300">Start the conversation</p>
+              <p className="text-xs text-zinc-500">
+                Messages are routed strictly peer-to-peer over WebRTC. No data is stored.
+              </p>
             </div>
-            <p className="font-semibold text-sm text-zinc-300">Start the conversation</p>
-            <p className="text-xs text-zinc-500">
-              Messages are routed strictly peer-to-peer over WebRTC. No data is stored.
-            </p>
+
+            {/* Icebreaker card */}
+            {connected && icebreaker && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="w-full bg-zinc-900/40 border border-white/5 rounded-2xl p-4 text-left space-y-3"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                    💡 Icebreaker
+                  </span>
+                  <button
+                    type="button"
+                    onClick={shuffleIcebreaker}
+                    className="text-[10px] font-semibold text-zinc-500 hover:text-zinc-300 underline cursor-pointer"
+                  >
+                    Shuffle
+                  </button>
+                </div>
+                <p className="text-sm text-zinc-200 leading-relaxed font-medium">
+                  "{icebreaker}"
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setDraft(icebreaker)}
+                  className="w-full text-center py-2 px-3 bg-zinc-800 hover:bg-zinc-700/80 text-zinc-300 text-xs font-semibold rounded-xl transition cursor-pointer"
+                >
+                  Use this question
+                </button>
+              </motion.div>
+            )}
           </div>
         )}
 

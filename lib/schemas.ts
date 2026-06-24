@@ -21,7 +21,10 @@ export const LatLngSchema = z.object({
 
 // ── Join ─────────────────────────────────────────────────────────────────────
 export const JoinBodySchema = z
-  .object({ id: SessionIdSchema })
+  .object({
+    id: SessionIdSchema,
+    mood: z.string().max(10).nullish(),
+  })
   .merge(LatLngSchema);
 
 // ── Leave ────────────────────────────────────────────────────────────────────
