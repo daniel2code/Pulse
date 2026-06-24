@@ -61,6 +61,18 @@
 4. **Message Sanitization**:
    - Utilized `dompurify` to strip out arbitrary HTML/scripts in messages both on transmission and display to protect against P2P Cross-Site Scripting (XSS).
 
+6. **Self-Healing Busy State Sync (`app/api/poll/route.ts` & `app/page.tsx`)**:
+   - **What was broken**: When a peer disconnected abruptly or had a network failure, they could remain stuck as `busy: true` in the database. Any future incoming connection requests were auto-declined on the server.
+   - **How it was fixed**: Extended the `/api/poll` endpoint to accept a `busy` query parameter. The client now sends its exact connection state (busy or not) during the 1.5-second heartbeat ticks, which corrects any database state desync within 1.5 seconds.
+
+7. **Generous Local-Testing Rate Limits (`lib/limiter.ts`)**:
+   - **What was broken**: The WebRTC signaling endpoint was rate-limited to 100 requests per minute per IP. Since WebRTC sends a signal for every ICE candidate generated, testing with two tabs on the same machine/IP would frequently hit the limit and drop candidates (status 429), failing the peer connection.
+   - **How it was fixed**: Raised the signal limit to 500/min and the poll limit to 300/min to accommodate multi-tab local development and multi-candidate SDP negotiation.
+
+8. **Crypto randomUUID Safe Fallback (`app/page.tsx`)**:
+   - **What was broken**: The app used browser-native `crypto.randomUUID()` directly. In non-secure contexts (such as connecting to local IP like `http://192.168.1.15:3000` from a mobile phone or another computer), this function is undefined and would crash the app.
+   - **How it was fixed**: Replaced it with a safe fallback UUID generator that falls back to a math-based generator if native `crypto.randomUUID` is unavailable.
+
 ---
 
 ## Phase 4 — Make it better (Creative Features)
