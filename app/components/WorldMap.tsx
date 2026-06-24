@@ -15,6 +15,52 @@ function dotColor(id: string): string {
   return `hsl(${Math.abs(hash) % 360}, 75%, 55%)`;
 }
 
+/**
+ * Groups peers within CLUSTER_THRESHOLD degrees of each other, then fans them
+ * out in a small arc so co-located users remain individually visible/tappable.
+ */
+const CLUSTER_THRESHOLD = 0.008; // ~900 m — treat anything closer as same spot
+const FAN_RADIUS = 0.006;        // degrees to spread each dot (~700 m)
+
+function computeDisplayPositions(
+  peers: PeerDot[],
+): Map<string, { lat: number; lng: number; clusterSize: number }> {
+  const result = new Map<string, { lat: number; lng: number; clusterSize: number }>();
+  const assigned = new Set<string>();
+
+  for (let i = 0; i < peers.length; i++) {
+    if (assigned.has(peers[i].id)) continue;
+    const cluster: PeerDot[] = [peers[i]];
+    for (let j = i + 1; j < peers.length; j++) {
+      if (assigned.has(peers[j].id)) continue;
+      const dLat = Math.abs(peers[i].lat - peers[j].lat);
+      const dLng = Math.abs(peers[i].lng - peers[j].lng);
+      if (dLat <= CLUSTER_THRESHOLD && dLng <= CLUSTER_THRESHOLD) {
+        cluster.push(peers[j]);
+      }
+    }
+    cluster.forEach((p) => assigned.add(p.id));
+
+    if (cluster.length === 1) {
+      result.set(cluster[0].id, { lat: cluster[0].lat, lng: cluster[0].lng, clusterSize: 1 });
+    } else {
+      // Fan out evenly around the centroid in a small circle
+      const centLat = cluster.reduce((s, p) => s + p.lat, 0) / cluster.length;
+      const centLng = cluster.reduce((s, p) => s + p.lng, 0) / cluster.length;
+      cluster.forEach((p, idx) => {
+        const angle = (2 * Math.PI * idx) / cluster.length - Math.PI / 2;
+        result.set(p.id, {
+          lat: centLat + FAN_RADIUS * Math.sin(angle),
+          lng: centLng + FAN_RADIUS * Math.cos(angle),
+          clusterSize: cluster.length,
+        });
+      });
+    }
+  }
+
+  return result;
+}
+
 export default function WorldMap({
   peers,
   me,
@@ -143,9 +189,15 @@ export default function WorldMap({
       const markers = markersRef.current;
       const seen = new Set<string>();
 
+      // Compute display positions — fans out co-located peers so they're each tappable
+      const displayPositions = computeDisplayPositions(peers);
+
       for (const peer of peers) {
         seen.add(peer.id);
         let marker = markers.get(peer.id);
+
+        const display = displayPositions.get(peer.id) ?? { lat: peer.lat, lng: peer.lng, clusterSize: 1 };
+        const isInCluster = display.clusterSize > 1;
 
         let sharesInterest = false;
         if (myInterests && peer.interests) {
@@ -154,7 +206,9 @@ export default function WorldMap({
           sharesInterest = myTags.some((t) => peerTags.includes(t));
         }
 
-        let tooltipText = "Tap to connect";
+        let tooltipText = isInCluster
+          ? `One of ${display.clusterSize} people nearby — tap to connect`
+          : "Tap to connect";
         if (peer.interests) {
           tooltipText += ` | Interests: ${peer.interests}`;
         }
@@ -169,7 +223,7 @@ export default function WorldMap({
             e.stopPropagation();
             if (canConnectRef.current) {
               onPeerClickRef.current(peer.id);
-              // Focus map on connection target
+              // Focus map on the peer's real (unfanned) position
               map.easeTo({
                 center: [peer.lng, peer.lat],
                 zoom: Math.max(map.getZoom(), 5.5),
@@ -178,16 +232,32 @@ export default function WorldMap({
             }
           });
           marker = new mapboxgl.Marker({ element: el })
-            .setLngLat([peer.lng, peer.lat])
+            .setLngLat([display.lng, display.lat])
             .addTo(map);
           markers.set(peer.id, marker);
+        } else {
+          // Update position if fan assignment changed
+          marker.setLngLat([display.lng, display.lat]);
         }
-        
+
         const el = marker.getElement();
         el.title = tooltipText;
         el.style.opacity = peer.busy ? "0.3" : "1";
         el.style.cursor = peer.busy || !canConnectRef.current ? "not-allowed" : "pointer";
 
+        // Cluster badge: show "×N" corner badge when co-located
+        const existingClusterBadge = el.querySelector(".pulse-cluster-badge");
+        if (isInCluster) {
+          if (!existingClusterBadge) {
+            el.innerHTML += `<span class="pulse-cluster-badge absolute -bottom-4 left-1/2 -translate-x-1/2 bg-zinc-900 border border-zinc-700 text-zinc-300 rounded-full px-1 text-[9px] font-bold leading-4 whitespace-nowrap pointer-events-none shadow-sm">×${display.clusterSize} here</span>`;
+          } else {
+            existingClusterBadge.textContent = `×${display.clusterSize} here`;
+          }
+        } else if (existingClusterBadge) {
+          existingClusterBadge.remove();
+        }
+
+        // Interest match glow
         if (sharesInterest) {
           el.style.boxShadow = "0 0 14px #10b981, inset 0 0 4px #10b981";
           el.style.borderWidth = "2px";
@@ -198,7 +268,7 @@ export default function WorldMap({
           el.style.borderColor = "";
         }
 
-        // Update mood emoji badge
+        // Mood emoji badge
         const existingMoodBadge = el.querySelector(".pulse-mood-emoji");
         if (peer.mood) {
           if (!existingMoodBadge) {
@@ -223,7 +293,7 @@ export default function WorldMap({
     return () => {
       cancelled = true;
     };
-  }, [peers, ready]);
+  }, [peers, ready, myInterests]);
 
   // Connection Line rendering
   useEffect(() => {
