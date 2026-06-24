@@ -15,8 +15,8 @@ export async function join(
   });
 }
 
-export async function poll(id: string): Promise<PollResponse> {
-  const res = await fetch(`/api/poll?id=${encodeURIComponent(id)}`, {
+export async function poll(id: string, busy: boolean): Promise<PollResponse> {
+  const res = await fetch(`/api/poll?id=${encodeURIComponent(id)}&busy=${busy}`, {
     cache: "no-store",
   });
   if (!res.ok) throw new Error(`poll failed: ${res.status}`);
@@ -29,11 +29,16 @@ export async function sendSignal(
   type: SignalType,
   payload?: string,
 ): Promise<void> {
-  await fetch("/api/signal", {
+  const res = await fetch("/api/signal", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ fromId, toId, type, payload }),
   });
+  if (!res.ok) {
+    const errText = await res.text();
+    console.error(`sendSignal failed: status ${res.status}, body: ${errText}`);
+    throw new Error(`sendSignal failed with status ${res.status}`);
+  }
 }
 
 // Fire-and-forget leave that survives the tab closing.

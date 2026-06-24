@@ -21,9 +21,10 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Validate the `id` query-parameter.
+  // Validate the query parameters.
   const parsed = PollQuerySchema.safeParse({
     id: request.nextUrl.searchParams.get("id"),
+    busy: request.nextUrl.searchParams.get("busy"),
   });
   if (!parsed.success) {
     return Response.json(
@@ -32,16 +33,19 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const { id } = parsed.data;
+  const { id, busy } = parsed.data;
   const now = Date.now();
   const staleCutoff = new Date(now - STALE_MS);
   const signalCutoff = new Date(now - SIGNAL_TTL_MS);
 
   try {
-    // 1) Heartbeat — refresh lastSeen for the caller only.
+    // 1) Heartbeat — refresh lastSeen and busy state for the caller only.
     await prisma.presence.updateMany({
       where: { id },
-      data: { lastSeen: new Date(now) },
+      data: {
+        lastSeen: new Date(now),
+        busy,
+      },
     });
 
     // 2) Reap stale presence rows and orphaned signals.

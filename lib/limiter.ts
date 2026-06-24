@@ -65,24 +65,24 @@ export function rateLimit(key: string, limit: number, windowMs: number): boolean
 
 const MINUTE_MS = 60_000;
 
-/** /api/join — presence registration: at most 10 joins per IP per minute. */
+/** /api/join — presence registration: at most 50 joins per IP per minute. */
 export function checkJoinRate(ip: string): boolean {
-  return rateLimit(`join:${ip}`, 10, MINUTE_MS);
+  return rateLimit(`join:${ip}`, 50, MINUTE_MS);
 }
 
-/** /api/poll — heartbeat polling: at most 120 requests per IP per minute. */
+/** /api/poll — heartbeat polling: at most 300 requests per IP per minute. */
 export function checkPollRate(ip: string): boolean {
-  return rateLimit(`poll:${ip}`, 120, MINUTE_MS);
+  return rateLimit(`poll:${ip}`, 300, MINUTE_MS);
 }
 
-/** /api/signal — WebRTC signaling: at most 100 signals per IP per minute. */
+/** /api/signal — WebRTC signaling: at most 500 signals per IP per minute. */
 export function checkSignalRate(ip: string): boolean {
-  return rateLimit(`signal:${ip}`, 100, MINUTE_MS);
+  return rateLimit(`signal:${ip}`, 500, MINUTE_MS);
 }
 
-/** /api/leave — cleanup: at most 20 leaves per IP per minute. */
+/** /api/leave — cleanup: at most 50 leaves per IP per minute. */
 export function checkLeaveRate(ip: string): boolean {
-  return rateLimit(`leave:${ip}`, 20, MINUTE_MS);
+  return rateLimit(`leave:${ip}`, 50, MINUTE_MS);
 }
 
 /**

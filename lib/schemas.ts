@@ -60,5 +60,7 @@ export const SignalBodySchema = z.object({
 });
 
 // ── Poll ─────────────────────────────────────────────────────────────────────
-// Only the `id` query-param needs validating here.
-export const PollQuerySchema = z.object({ id: SessionIdSchema });
+export const PollQuerySchema = z.object({
+  id: SessionIdSchema,
+  busy: z.string().optional().transform((v) => v === "true"),
+});
