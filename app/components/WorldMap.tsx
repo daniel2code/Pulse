@@ -19,12 +19,16 @@ export default function WorldMap({
   peers,
   me,
   myMood,
+  myInterests,
+  connectedPeerCoords,
   onPeerClick,
   canConnect,
 }: {
   peers: PeerDot[];
   me: { lat: number; lng: number } | null;
   myMood: string | null;
+  myInterests: string | null;
+  connectedPeerCoords: { lat: number; lng: number } | null;
   onPeerClick: (id: string) => void;
   canConnect: boolean;
 }) {
@@ -142,12 +146,25 @@ export default function WorldMap({
       for (const peer of peers) {
         seen.add(peer.id);
         let marker = markers.get(peer.id);
+
+        let sharesInterest = false;
+        if (myInterests && peer.interests) {
+          const myTags = myInterests.split(",").map((t) => t.trim().toLowerCase());
+          const peerTags = peer.interests.split(",").map((t) => t.trim().toLowerCase());
+          sharesInterest = myTags.some((t) => peerTags.includes(t));
+        }
+
+        let tooltipText = "Tap to connect";
+        if (peer.interests) {
+          tooltipText += ` | Interests: ${peer.interests}`;
+        }
+
         if (!marker) {
           const el = document.createElement("button");
           el.className = "pulse-dot";
           el.style.color = dotColor(peer.id);
           el.style.background = dotColor(peer.id);
-          el.title = "Tap to connect";
+          el.title = tooltipText;
           el.addEventListener("click", (e) => {
             e.stopPropagation();
             if (canConnectRef.current) {
@@ -167,8 +184,19 @@ export default function WorldMap({
         }
         
         const el = marker.getElement();
+        el.title = tooltipText;
         el.style.opacity = peer.busy ? "0.3" : "1";
         el.style.cursor = peer.busy || !canConnectRef.current ? "not-allowed" : "pointer";
+
+        if (sharesInterest) {
+          el.style.boxShadow = "0 0 14px #10b981, inset 0 0 4px #10b981";
+          el.style.borderWidth = "2px";
+          el.style.borderColor = "#34d399";
+        } else {
+          el.style.boxShadow = "";
+          el.style.borderWidth = "";
+          el.style.borderColor = "";
+        }
 
         // Update mood emoji badge
         const existingMoodBadge = el.querySelector(".pulse-mood-emoji");
@@ -196,6 +224,61 @@ export default function WorldMap({
       cancelled = true;
     };
   }, [peers, ready]);
+
+  // Connection Line rendering
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+
+    const sourceId = "connection-line-source";
+    const layerId = "connection-line-layer";
+
+    if (me && connectedPeerCoords) {
+      const geojson = {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "LineString",
+          coordinates: [
+            [me.lng, me.lat],
+            [connectedPeerCoords.lng, connectedPeerCoords.lat],
+          ],
+        },
+      };
+
+      if (map.getSource(sourceId)) {
+        (map.getSource(sourceId) as any).setData(geojson);
+      } else {
+        map.addSource(sourceId, {
+          type: "geojson",
+          data: geojson as any,
+        });
+
+        map.addLayer({
+          id: layerId,
+          type: "line",
+          source: sourceId,
+          layout: {
+            "line-join": "round",
+            "line-cap": "round",
+          },
+          paint: {
+            "line-color": "#10b981",
+            "line-width": 3,
+            "line-blur": 1,
+            "line-opacity": 0.85,
+          },
+        });
+      }
+    } else {
+      if (map.getLayer(layerId)) {
+        map.removeLayer(layerId);
+      }
+      if (map.getSource(sourceId)) {
+        map.removeSource(sourceId);
+      }
+    }
+  }, [me, connectedPeerCoords, ready]);
 
   return (
     <div className="absolute inset-0">

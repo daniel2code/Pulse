@@ -6,11 +6,12 @@ export async function join(
   lat: number,
   lng: number,
   mood?: string | null,
+  interests?: string | null,
 ): Promise<void> {
   await fetch("/api/join", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, lat, lng, mood }),
+    body: JSON.stringify({ id, lat, lng, mood, interests }),
   });
 }
 

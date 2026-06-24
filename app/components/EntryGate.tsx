@@ -7,11 +7,17 @@ import { Compass, MapPin, AlertCircle, Globe } from "lucide-react";
 export default function EntryGate({
   onReady,
 }: {
-  onReady: (lat: number, lng: number, mood: string | null) => void;
+  onReady: (
+    lat: number,
+    lng: number,
+    mood: string | null,
+    interests: string | null,
+  ) => void;
 }) {
   const [status, setStatus] = useState<"idle" | "locating" | "error">("idle");
   const [error, setError] = useState<string>("");
   const [selectedMood, setSelectedMood] = useState<string>("💬");
+  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
 
   const moods = [
     { emoji: "💬", label: "Chatting" },
@@ -23,6 +29,26 @@ export default function EntryGate({
     { emoji: "✈️", label: "Travel" },
   ];
 
+  const interestsList = [
+    "Music",
+    "Sports",
+    "Tech",
+    "Gaming",
+    "Movies",
+    "Art",
+    "Books",
+    "Travel",
+    "Food",
+  ];
+
+  const toggleInterest = (interest: string) => {
+    setSelectedInterests((prev) =>
+      prev.includes(interest)
+        ? prev.filter((i) => i !== interest)
+        : [...prev, interest],
+    );
+  };
+
   function enter() {
     if (!("geolocation" in navigator)) {
       setStatus("error");
@@ -31,7 +57,13 @@ export default function EntryGate({
     }
     setStatus("locating");
     navigator.geolocation.getCurrentPosition(
-      (pos) => onReady(pos.coords.latitude, pos.coords.longitude, selectedMood),
+      (pos) =>
+        onReady(
+          pos.coords.latitude,
+          pos.coords.longitude,
+          selectedMood,
+          selectedInterests.join(","),
+        ),
       (err) => {
         setStatus("error");
         setError(
@@ -92,6 +124,31 @@ export default function EntryGate({
                 <span className="text-xs opacity-90">{m.label}</span>
               </button>
             ))}
+          </div>
+        </div>
+
+        <div className="mt-6 text-left">
+          <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500 block mb-3">
+            Select your interests:
+          </label>
+          <div className="flex flex-wrap gap-2 justify-center mb-6">
+            {interestsList.map((interest) => {
+              const selected = selectedInterests.includes(interest);
+              return (
+                <button
+                  key={interest}
+                  type="button"
+                  onClick={() => toggleInterest(interest)}
+                  className={`px-3 py-1.5 rounded-full text-xs border transition-all cursor-pointer ${
+                    selected
+                      ? "bg-teal-500/25 border-teal-400 text-teal-300 font-medium"
+                      : "bg-zinc-900/40 border-zinc-800/80 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60"
+                  }`}
+                >
+                  {interest}
+                </button>
+              );
+            })}
           </div>
         </div>
 

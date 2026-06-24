@@ -12,12 +12,13 @@ datasource db {
 }
 
 model Presence {
-  id       String   @id // client-generated session uuid
-  lat      Float // ALREADY privacy-offset coords (raw is never stored)
-  lng      Float
-  busy     Boolean  @default(false) // true while in an active connection
-  mood     String?  // status/emoji (e.g. 💬, 🍕, etc)
-  lastSeen DateTime
+  id        String   @id // client-generated session uuid
+  lat       Float // ALREADY privacy-offset coords (raw is never stored)
+  lng       Float
+  busy      Boolean  @default(false) // true while in an active connection
+  mood      String?  // status/emoji (e.g. 💬, 🍕, etc)
+  interests String?  // comma-separated interest tags (e.g. Music,Sports)
+  lastSeen  DateTime
 
   @@index([lastSeen])
 }

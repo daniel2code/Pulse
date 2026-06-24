@@ -36,6 +36,7 @@ export default function Home() {
   );
   const [remoteTyping, setRemoteTyping] = useState(false);
   const [myMood, setMyMood] = useState<string | null>(null);
+  const [myInterests, setMyInterests] = useState<string | null>(null);
 
   const getPeerCoords = (peerId?: string) => {
     if (!peerId) return null;
@@ -327,11 +328,33 @@ export default function Home() {
     };
   }, [sessionId, phase]);
 
-  async function handleReady(lat: number, lng: number, mood: string | null) {
+  async function handleReady(
+    lat: number,
+    lng: number,
+    mood: string | null,
+    interests: string | null,
+  ) {
     setMyLocation({ lat, lng });
     setMyMood(mood);
-    await join(sessionId, lat, lng, mood);
+    setMyInterests(interests);
+    await join(sessionId, lat, lng, mood, interests);
     setPhase("live");
+  }
+
+  function handleQuickMatch() {
+    if (connRef.current.kind !== "idle" || !myInterests) return;
+    const myTags = myInterests.split(",").map((t) => t.trim().toLowerCase());
+    const matchingPeer = peers.find((p) => {
+      if (p.busy || !p.interests) return false;
+      const peerTags = p.interests.split(",").map((t) => t.trim().toLowerCase());
+      return myTags.some((t) => peerTags.includes(t));
+    });
+    if (matchingPeer) {
+      requestConnection(matchingPeer.id);
+      showNotice(`Requesting match on interests: ${matchingPeer.interests}`);
+    } else {
+      showNotice("No available matches with similar interests.");
+    }
   }
 
   if (phase === "gate") {
@@ -346,11 +369,20 @@ export default function Home() {
         peers={peers}
         me={myLocation}
         myMood={myMood}
+        myInterests={myInterests}
+        connectedPeerCoords={
+          conn.kind === "connected" ? getPeerCoords(conn.peerId) : null
+        }
         onPeerClick={requestConnection}
         canConnect={conn.kind === "idle"}
       />
 
-      <DashboardWidget peers={peers} selfMood={myMood} />
+      <DashboardWidget
+        peers={peers}
+        selfMood={myMood}
+        selfInterests={myInterests}
+        onQuickMatch={handleQuickMatch}
+      />
 
       {notice && (
         <div className="absolute left-1/2 top-20 z-30 -translate-x-1/2 rounded-full bg-zinc-800/90 px-4 py-2 text-sm text-zinc-100 shadow-lg backdrop-blur">

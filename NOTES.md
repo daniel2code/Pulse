@@ -75,6 +75,14 @@
 3. **Stranger Icebreakers**:
    - Implemented a floating "Icebreaker" widget at the top of empty chat windows showing fun conversation starters, with shuffle capabilities and a one-click button to pre-fill the chat input.
 
+4. **Interest Matching & Quick Match**:
+   - Allowed users to select multiple interest tags (e.g., Music, Sports, Tech) during onboarding.
+   - Highlights peers with matching interests on the map using a distinct glowing green border.
+   - Introduced a **"Quick Match"** dashboard trigger that searches for active online peers with overlapping interests and automatically requests a connection.
+
+5. **Map Connection Trace Layer**:
+   - Integrated a Mapbox GeoJSON LineString source and animated connection trace layer that dynamically draws a glowing line connecting Point A to Point B on the map upon successful peer match, showing user connectivity visually.
+
 ### Next Steps with More Time:
 - **STUN/TURN Servers**: Deploy a custom coturn server to enable connections on strict corporate networks.
-- **Persistent Mood Updates**: Allow active users to update their mood directly from the live map dashboard without re-joining.
+- **Persistent Mood/Interest Updates**: Allow active users to update their vibe or interest list directly from the live map dashboard without re-joining.

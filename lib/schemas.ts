@@ -24,6 +24,7 @@ export const JoinBodySchema = z
   .object({
     id: SessionIdSchema,
     mood: z.string().max(10).nullish(),
+    interests: z.string().max(200).nullish(),
   })
   .merge(LatLngSchema);
 

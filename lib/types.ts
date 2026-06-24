@@ -16,6 +16,7 @@ export interface PeerDot {
   lng: number;
   busy: boolean;
   mood: string | null;
+  interests: string | null;
 }
 
 export interface SignalMsg {

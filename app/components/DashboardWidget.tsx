@@ -7,9 +7,16 @@ import type { PeerDot } from "@/lib/types";
 interface DashboardWidgetProps {
   peers: PeerDot[];
   selfMood: string | null;
+  selfInterests: string | null;
+  onQuickMatch: () => void;
 }
 
-export default function DashboardWidget({ peers, selfMood }: DashboardWidgetProps) {
+export default function DashboardWidget({
+  peers,
+  selfMood,
+  selfInterests,
+  onQuickMatch,
+}: DashboardWidgetProps) {
   const totalOnline = peers.length + 1;
 
   // Aggregate moods
@@ -24,6 +31,20 @@ export default function DashboardWidget({ peers, selfMood }: DashboardWidgetProp
   });
 
   const moodsList = Object.entries(moodCounts).sort((a, b) => b[1] - a[1]);
+
+  // Aggregate matches
+  let matchCount = 0;
+  if (selfInterests) {
+    const myTags = selfInterests.split(",").map((t) => t.trim().toLowerCase());
+    peers.forEach((p) => {
+      if (p.interests && !p.busy) {
+        const peerTags = p.interests.split(",").map((t) => t.trim().toLowerCase());
+        if (myTags.some((t) => peerTags.includes(t))) {
+          matchCount++;
+        }
+      }
+    });
+  }
 
   return (
     <motion.div
@@ -83,9 +104,28 @@ export default function DashboardWidget({ peers, selfMood }: DashboardWidgetProp
               <Users className="h-3.5 w-3.5 text-zinc-500" />
               <span>Available Strangers</span>
             </span>
-            <span className="text-emerald-400 font-mono font-medium">{peers.filter(p => !p.busy).length}</span>
+            <span className="text-emerald-400 font-mono font-medium">
+              {peers.filter((p) => !p.busy).length}
+            </span>
           </div>
         </div>
+
+        {/* Quick Match section */}
+        {selfInterests && (
+          <div className="border-t border-zinc-800/30 pt-2.5">
+            <div className="flex items-center justify-between text-xs text-zinc-400 mb-2">
+              <span>Matching Interests ({matchCount} online)</span>
+            </div>
+            <button
+              onClick={onQuickMatch}
+              disabled={matchCount === 0}
+              className="w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 disabled:opacity-30 disabled:from-zinc-800 disabled:to-zinc-800 text-zinc-950 font-bold text-xs rounded-xl transition cursor-pointer"
+            >
+              <Heart className="h-3.5 w-3.5" />
+              <span>Quick Match</span>
+            </button>
+          </div>
+        )}
       </div>
     </motion.div>
   );
