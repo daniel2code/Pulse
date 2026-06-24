@@ -322,7 +322,7 @@ export default function Home() {
 
     const tick = async () => {
       try {
-        const isBusy = connRef.current.kind === "connecting" || connRef.current.kind === "connected";
+        const isBusy = connRef.current.kind !== "idle";
         const data = await poll(sessionId, isBusy);
         if (!active) return;
         setPeers(data.peers);
