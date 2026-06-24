@@ -249,7 +249,10 @@ export default function WorldMap({
         const existingClusterBadge = el.querySelector(".pulse-cluster-badge");
         if (isInCluster) {
           if (!existingClusterBadge) {
-            el.innerHTML += `<span class="pulse-cluster-badge absolute -bottom-4 left-1/2 -translate-x-1/2 bg-zinc-900 border border-zinc-700 text-zinc-300 rounded-full px-1 text-[9px] font-bold leading-4 whitespace-nowrap pointer-events-none shadow-sm">×${display.clusterSize} here</span>`;
+            const badge = document.createElement("span");
+            badge.className = "pulse-cluster-badge absolute -bottom-4 left-1/2 -translate-x-1/2 bg-zinc-900 border border-zinc-700 text-zinc-300 rounded-full px-1 text-[9px] font-bold leading-4 whitespace-nowrap pointer-events-none shadow-sm";
+            badge.textContent = `×${display.clusterSize} here`;
+            el.appendChild(badge);
           } else {
             existingClusterBadge.textContent = `×${display.clusterSize} here`;
           }
@@ -272,7 +275,10 @@ export default function WorldMap({
         const existingMoodBadge = el.querySelector(".pulse-mood-emoji");
         if (peer.mood) {
           if (!existingMoodBadge) {
-            el.innerHTML += `<span class="pulse-mood-emoji absolute -top-8 left-1/2 -translate-x-1/2 bg-zinc-950 border border-zinc-800 rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-md shadow-black/50 hover:scale-110 transition-transform pointer-events-none">${peer.mood}</span>`;
+            const badge = document.createElement("span");
+            badge.className = "pulse-mood-emoji absolute -top-8 left-1/2 -translate-x-1/2 bg-zinc-950 border border-zinc-800 rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-md shadow-black/50 hover:scale-110 transition-transform pointer-events-none";
+            badge.textContent = peer.mood;
+            el.appendChild(badge);
           } else if (existingMoodBadge.textContent !== peer.mood) {
             existingMoodBadge.textContent = peer.mood;
           }
