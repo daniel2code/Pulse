@@ -1,5 +1,7 @@
 import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { LeaveBodySchema } from "@/lib/schemas";
+import { checkLeaveRate, getClientIp } from "@/lib/limiter";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,24 +10,38 @@ export const dynamic = "force-dynamic";
 // signals to/from this user. Called via navigator.sendBeacon on tab close, so
 // the body may arrive as text — parse defensively.
 export async function POST(request: NextRequest) {
+  // Rate limit by IP.
+  const ip = getClientIp(request);
+  if (!checkLeaveRate(ip)) {
+    return Response.json(
+      { error: "Too many requests. Please slow down." },
+      { status: 429 },
+    );
+  }
+
   let id: string | undefined;
   try {
     const text = await request.text();
-    id = text ? (JSON.parse(text)?.id as string | undefined) : undefined;
+    const raw = text ? JSON.parse(text) : {};
+    const parsed = LeaveBodySchema.safeParse(raw);
+    if (!parsed.success) {
+      return Response.json({ error: "Invalid id." }, { status: 400 });
+    }
+    id = parsed.data.id;
   } catch {
-    id = undefined;
+    return Response.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  if (typeof id !== "string" || !id) {
-    return Response.json({ error: "invalid id" }, { status: 400 });
+  try {
+    // Independent cleanup deletes — no atomicity needed.
+    await prisma.signal.deleteMany({
+      where: { OR: [{ toId: id }, { fromId: id }] },
+    });
+    await prisma.presence.deleteMany({ where: { id } });
+  } catch (err) {
+    console.error("[leave] db error:", err);
+    return Response.json({ error: "Internal server error." }, { status: 500 });
   }
-
-  // Independent cleanup deletes — no atomicity needed (and interactive
-  // transactions are unreliable over a PgBouncer pooler).
-  await prisma.signal.deleteMany({
-    where: { OR: [{ toId: id }, { fromId: id }] },
-  });
-  await prisma.presence.deleteMany({ where: { id } });
 
   return Response.json({ ok: true });
 }

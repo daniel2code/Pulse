@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Video, X, ShieldAlert, User, MessageCircle, AlertCircle } from "lucide-react";
+import { Send, Video, X, User, MessageCircle } from "lucide-react";
+import DOMPurify from "dompurify";
 
 export interface ChatMessage {
   id: number;
@@ -44,7 +45,10 @@ export default function ChatPanel({
     e.preventDefault();
     const text = draft.trim();
     if (!text || !connected) return;
-    onSend(text);
+    // Sanitize outgoing message before sending (strips any injected HTML).
+    const safeText = DOMPurify.sanitize(text, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+    if (!safeText) return;
+    onSend(safeText);
     setDraft("");
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     setIsLocalTyping(false);
@@ -158,7 +162,8 @@ export default function ChatPanel({
                       : "bg-zinc-900 border border-white/5 text-zinc-100 rounded-tl-none"
                   }`}
                 >
-                  {m.text}
+                  {/* Sanitize incoming messages to strip any script/HTML injections */}
+                  {DOMPurify.sanitize(m.text, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] })}
                 </div>
               </motion.div>
             ))}
